@@ -56,7 +56,6 @@ require(knitr)
 require(patchwork)
 
 knitr::opts_chunk$set(echo = TRUE, fig.height = 3)
-knitr::opts_chunk$set(echo = TRUE)
 
 theme_set(theme_minimal())
 ```
