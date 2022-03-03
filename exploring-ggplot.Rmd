@@ -2,7 +2,7 @@
 title: "Experiments with ggplot2 barcharts"
 subtitle:  "a simple data exploration exercise" 
 author: "Richard Robbins"
-date: "March 1, 2022"
+date: "March 2, 2022"
 output:
   bookdown::pdf_document2:
   toc: true
@@ -15,6 +15,10 @@ output:
 # Introduction
 
 This document is intended to serve as a perpetual work in progress as I explore *ggplot2* and learn how to use *figures* and *figure references* in R markdown.  I approach things in a very deliberate fashion, pulling apart elements one at a time.  I highlight and discuss things that may be self-evident with a view to precision and being complete.
+
+This document and the related data are maintained in a public github repository at <https://github.com/RERobbins/exploring-ggplot>
+
+All are welcome to comment and collaborate.
 
 # Global settings
 ## YAML header block
@@ -40,6 +44,7 @@ output:
 Here are the packages we need.
 
 - tidyverse
+- forcats
 - knitr
 - patchwork
 
@@ -52,6 +57,7 @@ I set *ggplot's* default theme to `theme_minimal`.
 
 ```{r packages-and-defaults, warning=FALSE, message=FALSE}
 require(tidyverse)
+require(forcats)
 require(knitr)
 require(patchwork)
 
@@ -63,7 +69,7 @@ theme_set(theme_minimal())
 # Data
 ## Load the data
 
-We use a data set that was created for the first lab in w203.  It includes information about voting in the 2020 general election and was derived from a much larger set of reference data.
+We use a data set that was created for an exercise in MIDS w203.  It includes information about voting in the 2020 general election and was derived from a much larger set of reference data.
 
 ```{r}
 df <- readRDS("anes_data.rds")
@@ -120,6 +126,7 @@ table(little_table)
 table(little_table %>% filter(voted.difficulty_level > "little"))
 filter(little_table, party < "Democrat")
 ```
+
 # Usually, voting is not difficult
 
 We want to produce visualizations to tell a story about the voting difficulty data we have.  It's often hard to look at a table of numbers and draw conclusions quickly.  Here, the key variable is a five point Likert scale. Bar charts work very well to visualize categorical information like this.
@@ -158,7 +165,7 @@ df %>% ggplot() +
 
 ## Eliminating NA as a category
 
-The chart shows `NA` values as a separate category.  Let's take a closer look at
+So far, our charts show `NA` values as a separate category.  Let's take a closer look at
 the data, once again with `table`, but this time we want to show `NA`.
 
 ```{r}
@@ -289,7 +296,7 @@ final_chart_1 + final_chart_2
 
 ## Let's clean it up
 
-That last visualization has two problems.  First, it's too tight across the page.  Second, we really don't need the legend to appear twice.  We can adjust the figure width and remove the legend from the left hand panel. See Figure \@ref(fig:patchwork-final).
+That last visualization has two problems.  First, it's too tight across the page.  Second, we really don't need the legend to appear twice.  We can adjust the figure width and remove the legend from the left hand panel. We adjust the figure width by adding `fig.width = 10` to the first line of the code chunk that produces the figure.  See Figure \@ref(fig:patchwork-final).
 
 The code fragment below illustrates a technique we could have used throughout.  For most of this document, we have created every chart with a complete expression.  This time, we derive a new plot (`final_chart_1a`) from an existing plot (`final_chart_1`) by adding a new *ggplot* element.
 
@@ -300,7 +307,7 @@ final_chart_1a + final_chart_2
 
 # What do we know about people who tried to vote but failed?
 
-Our data includes the concept of a *presumed voter*.  In this data, someone is a presumed voter if we believe they attempted to vote but faced an extreme difficulty that blocked their attempt outright.  Information about these people is not captured by the `voted.difficulty_level` data (it is included in the `voter.difficulty_data` variable).  Information about what kept the presumed voters from voting is captured by the `presumed_reason` variable.  Here is a list of reasons people could give for not voting.  Only some of the reasons are sufficient to warrant an inference that the person intended to vote.  
+Our data includes the concept of a *presumed voter*.  In this data, someone is a presumed voter if we believe they attempted to vote but faced an extreme difficulty that blocked their attempt outright.  Information about these people is not captured by the `voted.difficulty_level` data (it is included in the `voter.difficulty_data` variable).  Information about what kept a presumed voter from voting is captured by the `presumed_reason` variable.  Here is a list of reasons people could give for not voting.  Only some of the reasons are sufficient to warrant an inference that the person intended to vote.  
 
 ```{r}
 levels(df$presumed.reason)
@@ -330,10 +337,11 @@ df %>%
         x = "reason")
 ```
 
-
 ## A little bit of polish
 
-There are two small adjustments we make to Figure \@ref(fig:presumed-voters).  The reason labels are too compressed, especially when rendered in a pdf, so we rotate them.  Also, I do not think the x axis label adds information given the balance of chart. So, we make that label blank using `element_blank()`. Finally, when we rotate the x axis labels, that will tend to compress the figure since we are going to use more room at the bottom for those labels which now extend further down than before.  To adjust for that I set the figure height to 4 to override the default of 3 that we have used throughout.  The code for that adjustment appears in the header to the `R` code chunk for this chart and can be seen in the Rmd file but does not appear in the pdf.  See Figure \@ref(fig:presumed-voters-revised).
+There are some small adjustments we make next to Figure \@ref(fig:presumed-voters).  The reason labels are too compressed, especially when rendered in a pdf, so we rotate them.  Also, I do not think the x axis label adds information given the balance of chart. So, we make that label blank using `element_blank()`. 
+
+Finally, when we rotate the x axis labels, that will tend to compress the figure since we are going to use more room at the bottom for those labels which now extend further down than before.  To adjust for that I set the figure height to 4 to override the default of 3 that we have used throughout.  The code for that adjustment appears in the header to the `R` code chunk for this chart and can be seen in the Rmd file but does not appear in the pdf.  See Figure \@ref(fig:presumed-voters-revised).
 
 ```{r presumed-voters-revised, fig.width = 10, fig.height = 4, fig.cap="Why some people didn't vote (revised)"}
 df %>%
@@ -348,13 +356,11 @@ df %>%
   theme(axis.text.x = element_text(angle = 90, vjust=0.5, hjust=1))
 ```
 
-## Reorder the x axis
+## A little more polish
 
-Now lets reorder the x axis.  See Figure \@ref(fig:presumed-reorder).
+The `presumed.reason` variable is a factor but not an ordered factor.  So, we might as well reorder the bars on the x axis so that they appear in descending order.  We use `fct_infreq` from the `forcats` package to do that.  See Figure \@ref(fig:presumed-reorder).
 
 ```{r presumed-reorder, fig.width = 10, fig.height = 4, fig.cap="Reorder the X axis"}
-library(forcats)
-
 df %>%
   ggplot() + 
   aes (x = fct_infreq(presumed.reason), fill=party) + 
